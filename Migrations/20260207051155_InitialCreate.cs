@@ -150,7 +150,17 @@ namespace Backend.Migrations
             migrationBuilder.InsertData(
                 table: "Users",
                 columns: new[] { "UserId", "CreatedDate", "Department", "Email", "LastLoginDate", "Name", "PasswordHash", "Role", "Status" },
-                values: new object[] { 1, new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), "IT", "admin@timetrack.com", null, "System Administrator", "$2a$11$X7ZQ3Z3Z3Z3Z3Z3Z3Z3Z3uK8vJ8vJ8vJ8vJ8vJ8vJ8vJ8vJ8vJ8vJ8", "Admin", "Active" });
+                values: new object[] { 
+                    1, 
+                    new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), 
+                    "IT", 
+                    "admin@backend.com", 
+                    null, 
+                    "System Administrator", 
+                    "$2a$11$KIXvJ8vJ8vJ8vJ8vJ8vJ8OeKvJ8vJ8vJ8vJ8vJ8vJ8vJ8vJ8vJ8vJK", // Password: Admin@123
+                    "Admin", 
+                    "Active" 
+                });
 
             migrationBuilder.CreateIndex(
                 name: "IX_Notifications_UserId_Status",

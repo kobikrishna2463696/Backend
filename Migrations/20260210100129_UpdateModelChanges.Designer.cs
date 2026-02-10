@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TimeTrack.API.Data;
 
@@ -11,9 +12,11 @@ using TimeTrack.API.Data;
 namespace Backend.Migrations
 {
     [DbContext(typeof(TimeTrackDbContext))]
-    partial class TimeTrackDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260210100129_UpdateModelChanges")]
+    partial class UpdateModelChanges
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

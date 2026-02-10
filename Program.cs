@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -74,7 +74,7 @@ builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo 
     { 
-        Title = "Backend API", 
+        Title = "TimeTrack API", 
         Version = "v1",
         Description = "Internal Time Logging & Productivity Monitoring System"
     });
@@ -116,6 +116,31 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
+
+// ✨ AUTO-CREATE DATABASE AND APPLY MIGRATIONS ✨
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    try
+    {
+        var context = services.GetRequiredService<TimeTrackDbContext>();
+        var logger = services.GetRequiredService<ILogger<Program>>();
+        
+        logger.LogInformation("Applying database migrations...");
+        context.Database.Migrate(); // This creates the database if it doesn't exist and applies all migrations
+        
+        logger.LogInformation("Seeding database...");
+        await DatabaseSeeder.SeedAsync(context); // 👈 ADD THIS LINE
+        
+        logger.LogInformation("Database is ready!");
+    }
+    catch (Exception ex)
+    {
+        var logger = services.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "An error occurred while migrating the database.");
+        throw;
+    }
+}
 
 if (app.Environment.IsDevelopment())
 {
