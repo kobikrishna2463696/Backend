@@ -22,6 +22,7 @@ builder.Services.AddScoped<ITimeLogRepository, TimeLogRepository>();
 builder.Services.AddScoped<ITaskRepository, TaskRepository>();
 builder.Services.AddScoped<ITaskTimeRepository, TaskTimeRepository>();
 builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
+builder.Services.AddScoped<IPendingRegistrationRepository, PendingRegistrationRepository>();
 
 // Service Layer Registration
 builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
@@ -29,6 +30,7 @@ builder.Services.AddScoped<ITimeLoggingService, TimeLoggingService>();
 builder.Services.AddScoped<ITaskManagementService, TaskManagementService>();
 builder.Services.AddScoped<IProductivityAnalyticsService, ProductivityAnalyticsService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddScoped<IRegistrationService, RegistrationService>();
 
 // JWT Authentication
 var jwtKey = builder.Configuration["JwtSettings:SecretKey"];
@@ -112,6 +114,7 @@ builder.Services.AddCors(options =>
               .AllowAnyMethod()
               .AllowAnyHeader()
               .AllowCredentials();
+
     });
 });
 

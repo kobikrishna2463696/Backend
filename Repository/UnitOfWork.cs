@@ -7,13 +7,14 @@ namespace TimeTrack.API.Repository;
 public class UnitOfWork : IUnitOfWork
 {
     private readonly TimeTrackDbContext _context;
-    private IDbContextTransaction _transaction;
+    private IDbContextTransaction? _transaction;
 
     public IUserRepository Users { get; }
     public ITimeLogRepository TimeLogs { get; }
     public ITaskRepository Tasks { get; }
     public ITaskTimeRepository TaskTimes { get; }
     public INotificationRepository Notifications { get; }
+    public IPendingRegistrationRepository PendingRegistrations { get; }
 
     public UnitOfWork(TimeTrackDbContext context)
     {
@@ -23,6 +24,7 @@ public class UnitOfWork : IUnitOfWork
         Tasks = new TaskRepository(_context);
         TaskTimes = new TaskTimeRepository(_context);
         Notifications = new NotificationRepository(_context);
+        PendingRegistrations = new PendingRegistrationRepository(_context);
     }
 
     public async Task<int> SaveChangesAsync()
@@ -40,7 +42,7 @@ public class UnitOfWork : IUnitOfWork
         try
         {
             await _context.SaveChangesAsync();
-            await _transaction.CommitAsync();
+            await _transaction!.CommitAsync();
         }
         catch
         {

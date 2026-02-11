@@ -16,6 +16,7 @@ public class TimeTrackDbContext : DbContext
     public DbSet<TaskTimeEntity> TaskTimes { get; set; }
     public DbSet<NotificationEntity> Notifications { get; set; }
     public DbSet<ProjectEntity> Projects { get; set; }
+    public DbSet<PendingRegistrationEntity> PendingRegistrations { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -124,6 +125,18 @@ public class TimeTrackDbContext : DbContext
 
             entity.HasIndex(e => e.Status);
             entity.HasIndex(e => e.ManagerUserId);
+        });
+
+        // PendingRegistration Entity Configuration
+        modelBuilder.Entity<PendingRegistrationEntity>(entity =>
+        {
+            entity.HasIndex(e => e.Email).IsUnique();
+            entity.Property(e => e.Status).HasDefaultValue("Pending");
+            
+            entity.HasOne(e => e.ProcessedByUser)
+                  .WithMany()
+                  .HasForeignKey(e => e.ProcessedByUserId)
+                  .OnDelete(DeleteBehavior.SetNull);
         });
 
         // Seed Initial Admin User

@@ -7,6 +7,7 @@ public interface IUnitOfWork : IDisposable
     ITaskRepository Tasks { get; }
     ITaskTimeRepository TaskTimes { get; }
     INotificationRepository Notifications { get; }
+    IPendingRegistrationRepository PendingRegistrations { get; }
     
     Task<int> SaveChangesAsync();
     Task BeginTransactionAsync();

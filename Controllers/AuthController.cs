@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using TimeTrack.API.DTOs.Auth;
 using TimeTrack.API.DTOs.Common;
+using TimeTrack.API.DTOs.Registration;
 using TimeTrack.API.Models.Enums;
 using TimeTrack.API.Service;
 
@@ -11,10 +12,12 @@ namespace TimeTrack.API.Controllers;
 public class AuthController : ControllerBase
 {
     private readonly IAuthenticationService _authService;
+    private readonly IRegistrationService _registrationService;
 
-    public AuthController(IAuthenticationService authService)
+    public AuthController(IAuthenticationService authService, IRegistrationService registrationService)
     {
         _authService = authService;
+        _registrationService = registrationService;
     }
 
     /// <summary>
@@ -28,13 +31,35 @@ public class AuthController : ControllerBase
     }
 
     /// <summary>
-    /// User registration endpoint
+    /// User registration endpoint - Employee/Manager requires admin approval
     /// </summary>
     [HttpPost("register")]
-    public async Task<ActionResult<ApiResponseDto<LoginResponseDto>>> Register([FromBody] RegisterRequestDto request)
+    public async Task<IActionResult> Register([FromBody] RegisterRequestDto request)
     {
-        var result = await _authService.RegisterAsync(request);
-        return Ok(ApiResponseDto<LoginResponseDto>.SuccessResponse(result, "Registration successful"));
+        // Employee and Manager registrations require admin approval
+        if (request.Role.Equals("Employee", StringComparison.OrdinalIgnoreCase) ||
+            request.Role.Equals("Manager", StringComparison.OrdinalIgnoreCase))
+        {
+            // Route to pending registration (stored in PendingRegistrations table)
+            var pendingRequest = new RegistrationRequestDto
+            {
+                Name = request.Name,
+                Email = request.Email,
+                Password = request.Password,
+                Role = request.Role,
+                Department = request.Department
+            };
+
+            var pendingResult = await _registrationService.SubmitRegistrationAsync(pendingRequest);
+            
+            return Ok(ApiResponseDto<RegistrationResponseDto>.SuccessResponse(
+                pendingResult, 
+                "Registration submitted. Please wait for admin approval before logging in."));
+        }
+
+        // Block direct Admin registration through this endpoint
+        return BadRequest(ApiResponseDto<string>.ErrorResponse(
+            "Admin accounts cannot be created through self-registration."));
     }
 
     /// <summary>
@@ -54,7 +79,8 @@ public class AuthController : ControllerBase
     [HttpGet("roles")]
     public ActionResult<ApiResponseDto<IEnumerable<string>>> GetRoles()
     {
-        var roles = new[] { "Employee", "Manager", "Admin" };
+        // Only Employee and Manager can self-register
+        var roles = new[] { "Employee", "Manager" };
         return Ok(ApiResponseDto<IEnumerable<string>>.SuccessResponse(
             roles, 
             "Available roles retrieved"));
