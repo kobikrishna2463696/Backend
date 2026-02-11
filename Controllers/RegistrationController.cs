@@ -128,13 +128,12 @@ public class RegistrationController : ControllerBase
     /// </summary>
     [HttpPost("{id}/reject")]
     [Authorize(Roles = "Admin")]
-    public async Task<ActionResult<ApiResponseDto<RegistrationResponseDto>>> Reject(
-        int id, [FromBody] RejectRegistrationDto request)
+    public async Task<ActionResult<ApiResponseDto<RegistrationResponseDto>>> Reject(int id)
     {
         try
         {
             var adminUserId = GetCurrentUserId();
-            var result = await _registrationService.RejectRegistrationAsync(id, adminUserId, request.Reason);
+            var result = await _registrationService.RejectRegistrationAsync(id, adminUserId);
             return Ok(ApiResponseDto<RegistrationResponseDto>.SuccessResponse(result, result.Message));
         }
         catch (KeyNotFoundException ex)

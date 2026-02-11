@@ -3,17 +3,20 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using TimeTrack.API.Data;
 
 #nullable disable
 
-namespace Backend.Migrations
+namespace TimeTrack.API.Data.Migrations
 {
     [DbContext(typeof(TimeTrackDbContext))]
-    partial class TimeTrackDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260211104330_RemoveRejectionReason")]
+    partial class RemoveRejectionReason
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -348,9 +351,6 @@ namespace Backend.Migrations
                     b.Property<DateTime?>("LastLoginDate")
                         .HasColumnType("datetime2");
 
-                    b.Property<int?>("ManagerId")
-                        .HasColumnType("int");
-
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -377,8 +377,6 @@ namespace Backend.Migrations
 
                     b.HasIndex("Email")
                         .IsUnique();
-
-                    b.HasIndex("ManagerId");
 
                     b.ToTable("Users");
 
@@ -484,16 +482,6 @@ namespace Backend.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("TimeTrack.API.Models.UserEntity", b =>
-                {
-                    b.HasOne("TimeTrack.API.Models.UserEntity", "Manager")
-                        .WithMany("AssignedEmployees")
-                        .HasForeignKey("ManagerId")
-                        .OnDelete(DeleteBehavior.NoAction);
-
-                    b.Navigation("Manager");
-                });
-
             modelBuilder.Entity("TimeTrack.API.Models.ProjectEntity", b =>
                 {
                     b.Navigation("Tasks");
@@ -506,8 +494,6 @@ namespace Backend.Migrations
 
             modelBuilder.Entity("TimeTrack.API.Models.UserEntity", b =>
                 {
-                    b.Navigation("AssignedEmployees");
-
                     b.Navigation("AssignedTasks");
 
                     b.Navigation("CreatedTasks");

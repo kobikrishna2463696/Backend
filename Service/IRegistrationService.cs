@@ -10,7 +10,7 @@ public interface IRegistrationService
     Task<IEnumerable<PendingRegistrationDto>> GetApprovedRegistrationsAsync();
     Task<IEnumerable<PendingRegistrationDto>> GetRejectedRegistrationsAsync();
     Task<RegistrationResponseDto> ApproveRegistrationAsync(int registrationId, int adminUserId);
-    Task<RegistrationResponseDto> RejectRegistrationAsync(int registrationId, int adminUserId, string? reason);
+    Task<RegistrationResponseDto> RejectRegistrationAsync(int registrationId, int adminUserId);
     Task DeleteRegistrationAsync(int registrationId);
     Task<int> GetPendingCountAsync();
 }
