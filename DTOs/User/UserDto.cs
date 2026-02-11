@@ -1,14 +1,14 @@
-namespace TimeTrack.API.DTOs.Registration;
+namespace TimeTrack.API.DTOs.User;
 
-public class PendingRegistrationDto
+public class UserDto
 {
-    public int RegistrationId { get; set; }
+    public int UserId { get; set; }
     public string Name { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
     public string Role { get; set; } = string.Empty;
     public string Department { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
-    public DateTime AppliedDate { get; set; }
-    public DateTime? ProcessedDate { get; set; }
-    public string? ProcessedByName { get; set; }
+    public int? ManagerId { get; set; }
+    public string? ManagerName { get; set; }
+    public List<int> AssignedEmployeeIds { get; set; } = new();
 }

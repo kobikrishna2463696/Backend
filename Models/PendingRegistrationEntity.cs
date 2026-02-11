@@ -24,7 +24,7 @@ public class PendingRegistrationEntity
 
     [Required]
     [StringLength(50)]
-    public string Role { get; set; } = string.Empty; // Employee, Manager
+    public string Role { get; set; } = string.Empty;
 
     [Required]
     [StringLength(100)]
@@ -32,7 +32,7 @@ public class PendingRegistrationEntity
 
     [Required]
     [StringLength(20)]
-    public string Status { get; set; } = "Pending"; // Pending, Approved, Rejected
+    public string Status { get; set; } = "Pending";
 
     public DateTime AppliedDate { get; set; } = DateTime.UtcNow;
 
@@ -40,10 +40,6 @@ public class PendingRegistrationEntity
 
     public int? ProcessedByUserId { get; set; }
 
-    [StringLength(500)]
-    public string? RejectionReason { get; set; }
-
-    // Navigation Property for the admin who processed
     [ForeignKey("ProcessedByUserId")]
     public virtual UserEntity? ProcessedByUser { get; set; }
 }

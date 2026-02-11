@@ -17,26 +17,22 @@ public class RegistrationService : IRegistrationService
 
     public async Task<RegistrationResponseDto> SubmitRegistrationAsync(RegistrationRequestDto request)
     {
-        // Validate role - only Employee and Manager can register via this flow
         var allowedRoles = new[] { "Employee", "Manager" };
         if (!allowedRoles.Contains(request.Role, StringComparer.OrdinalIgnoreCase))
         {
-            throw new ArgumentException("Only Employee and Manager roles can register through this portal.");
+            throw new ArgumentException("Only Employee and Manager roles can register.");
         }
 
-        // Validate department
         if (!DepartmentType.IsValid(request.Department))
         {
             throw new ArgumentException($"Invalid department. Allowed: {DepartmentType.GetValidDepartmentsString()}");
         }
 
-        // Check if email already exists in Users table
         if (await _unitOfWork.Users.EmailExistsAsync(request.Email))
         {
             throw new InvalidOperationException("Email already registered as an active user.");
         }
 
-        // Check if email already has a pending registration
         var existingRegistration = await _unitOfWork.PendingRegistrations.GetByEmailAsync(request.Email);
         if (existingRegistration != null)
         {
@@ -109,7 +105,6 @@ public class RegistrationService : IRegistrationService
             throw new InvalidOperationException($"Registration has already been {registration.Status.ToLower()}.");
         }
 
-        // Create the user in the Users table
         var user = new UserEntity
         {
             Name = registration.Name,
@@ -123,7 +118,6 @@ public class RegistrationService : IRegistrationService
 
         await _unitOfWork.Users.AddAsync(user);
 
-        // Update registration status
         registration.Status = "Approved";
         registration.ProcessedDate = DateTime.UtcNow;
         registration.ProcessedByUserId = adminUserId;
@@ -139,7 +133,7 @@ public class RegistrationService : IRegistrationService
         };
     }
 
-    public async Task<RegistrationResponseDto> RejectRegistrationAsync(int registrationId, int adminUserId, string? reason)
+    public async Task<RegistrationResponseDto> RejectRegistrationAsync(int registrationId, int adminUserId)
     {
         var registration = await _unitOfWork.PendingRegistrations.GetByIdAsync(registrationId);
         if (registration == null)
@@ -152,11 +146,9 @@ public class RegistrationService : IRegistrationService
             throw new InvalidOperationException($"Registration has already been {registration.Status.ToLower()}.");
         }
 
-        // Update registration status - keep record in database as rejected
         registration.Status = "Rejected";
         registration.ProcessedDate = DateTime.UtcNow;
         registration.ProcessedByUserId = adminUserId;
-        registration.RejectionReason = reason;
         _unitOfWork.PendingRegistrations.Update(registration);
 
         await _unitOfWork.SaveChangesAsync();
@@ -199,8 +191,7 @@ public class RegistrationService : IRegistrationService
             Status = entity.Status,
             AppliedDate = entity.AppliedDate,
             ProcessedDate = entity.ProcessedDate,
-            ProcessedByName = entity.ProcessedByUser?.Name,
-            RejectionReason = entity.RejectionReason
+            ProcessedByName = entity.ProcessedByUser?.Name
         };
     }
 }

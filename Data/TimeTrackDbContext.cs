@@ -28,6 +28,12 @@ public class TimeTrackDbContext : DbContext
             entity.HasIndex(e => e.Email).IsUnique();
             entity.Property(e => e.Role).IsRequired();
             entity.Property(e => e.Status).HasDefaultValue("Active");
+
+            // Manager-Employee Self-Referencing Relationship
+            entity.HasOne(u => u.Manager)
+                  .WithMany(u => u.AssignedEmployees)
+                  .HasForeignKey(u => u.ManagerId)
+                  .OnDelete(DeleteBehavior.NoAction);
         });
 
         // TimeLog Entity Configuration
