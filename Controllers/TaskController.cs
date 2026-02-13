@@ -36,10 +36,10 @@ public class TaskController : ControllerBase
     /// Updates task details (managers/admins only)
     /// </summary>
     [Authorize(Policy = "ManagerOrAdmin")]
-    [HttpPut("{taskId}")]
-    public async Task<ActionResult<ApiResponseDto<TaskResponseDto>>> UpdateTask(int taskId, [FromBody] CreateTaskDto dto)
+    [HttpPut("{id}")]
+    public async Task<ActionResult<ApiResponseDto<TaskResponseDto>>> UpdateTask([FromRoute] int id, [FromBody] CreateTaskDto dto)
     {
-        var result = await _taskService.UpdateTaskAsync(taskId, dto);
+        var result = await _taskService.UpdateTaskAsync(id, dto);
         return Ok(ApiResponseDto<TaskResponseDto>.SuccessResponse(result, "Task updated successfully"));
     }
 
@@ -47,11 +47,13 @@ public class TaskController : ControllerBase
     /// Deletes a task (managers/admins only, cannot delete completed tasks)
     /// </summary>
     [Authorize(Policy = "ManagerOrAdmin")]
-    [HttpDelete("{taskId}")]
-    public async Task<ActionResult<ApiResponseDto<bool>>> DeleteTask(int taskId)
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteTask([FromRoute] int id)
     {
-        var result = await _taskService.DeleteTaskAsync(taskId);
-        return Ok(ApiResponseDto<bool>.SuccessResponse(result, "Task deleted successfully"));
+        var result = await _taskService.DeleteTaskAsync(id);
+        if (!result)
+            return NotFound();
+        return NoContent();
     }
 
     /// <summary>

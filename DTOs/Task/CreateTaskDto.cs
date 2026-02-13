@@ -14,12 +14,17 @@ public class CreateTaskDto
     [Required]
     public int AssignedToUserId { get; set; }
 
+    public int? ProjectId { get; set; }
+
     [Required]
     [Range(0.1, 999.99)]
     public decimal EstimatedHours { get; set; }
 
     [Required]
     public string Priority { get; set; } = "Medium";
+
+    [StringLength(50)]
+    public string Status { get; set; } = "Pending";
 
     public DateTime? DueDate { get; set; }
 }

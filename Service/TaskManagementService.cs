@@ -32,6 +32,7 @@ public class TaskManagementService : ITaskManagementService
             Description = dto.Description,
             AssignedToUserId = dto.AssignedToUserId,
             CreatedByUserId = creatorId,
+            ProjectId = dto.ProjectId,
             EstimatedHours = dto.EstimatedHours,
             Status = "Pending",
             Priority = dto.Priority,
@@ -62,8 +63,10 @@ public class TaskManagementService : ITaskManagementService
         taskEntity.Title = dto.Title;
         taskEntity.Description = dto.Description;
         taskEntity.AssignedToUserId = dto.AssignedToUserId;
+        taskEntity.ProjectId = dto.ProjectId;
         taskEntity.EstimatedHours = dto.EstimatedHours;
         taskEntity.Priority = dto.Priority;
+        taskEntity.Status = dto.Status;
         taskEntity.DueDate = dto.DueDate;
 
         _unitOfWork.Tasks.Update(taskEntity);
@@ -225,6 +228,8 @@ public class TaskManagementService : ITaskManagementService
             AssignedToUserName = task.AssignedToUser?.Name ?? "Unknown",
             CreatedByUserId = task.CreatedByUserId,
             CreatedByUserName = task.CreatedByUser?.Name ?? "Unknown",
+            ProjectId = task.ProjectId,
+            ProjectName = task.Project?.ProjectName,
             EstimatedHours = task.EstimatedHours,
             ActualHoursSpent = actualHours,
             Status = task.Status,

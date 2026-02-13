@@ -11,14 +11,25 @@ public class TaskRepository : GenericRepository<TaskEntity>, ITaskRepository
     {
     }
 
+    public override async Task<TaskEntity> GetByIdAsync(int id)
+    {
+        return await _dbSet
+            .Include(t => t.AssignedToUser)
+            .Include(t => t.CreatedByUser)
+            .Include(t => t.Project)
+            .FirstOrDefaultAsync(t => t.TaskId == id);
+    }
+
     public async Task<IEnumerable<TaskEntity>> GetTasksByAssignedUserAsync(int userId)
     {
         return await _dbSet
             .Include(t => t.AssignedToUser)
             .Include(t => t.CreatedByUser)
+            .Include(t => t.Project)
             .Include(t => t.TaskTimes)
             .Where(t => t.AssignedToUserId == userId)
-            .OrderByDescending(t => t.CreatedDate)
+            .OrderBy(t => t.DueDate)
+            .ThenByDescending(t => t.CreatedDate)
             .ToListAsync();
     }
 
@@ -27,6 +38,7 @@ public class TaskRepository : GenericRepository<TaskEntity>, ITaskRepository
         return await _dbSet
             .Include(t => t.AssignedToUser)
             .Include(t => t.CreatedByUser)
+            .Include(t => t.Project)
             .Include(t => t.TaskTimes)
             .Where(t => t.CreatedByUserId == creatorId)
             .OrderByDescending(t => t.CreatedDate)
