@@ -152,6 +152,25 @@ public class UserController : ControllerBase
     }
 
     /// <summary>
+    /// Gets all team members under the logged-in manager
+    /// </summary>
+    [Authorize(Policy = "ManagerOrAdmin")]
+    [HttpGet("my-team")]
+    public async Task<ActionResult<ApiResponseDto<IEnumerable<TeamMemberDto>>>> GetMyTeam()
+    {
+        var managerId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var employees = await _unitOfWork.Users.GetEmployeesByManagerIdAsync(managerId);
+
+        var teamMembers = employees.Select(e => new TeamMemberDto
+        {
+            UserId = e.UserId,
+            Name = e.Name
+        });
+
+        return Ok(ApiResponseDto<IEnumerable<TeamMemberDto>>.SuccessResponse(teamMembers));
+    }
+
+    /// <summary>
     /// Manager dashboard stats
     /// </summary>
     [Authorize(Policy = "ManagerOrAdmin")]

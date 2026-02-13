@@ -9,6 +9,8 @@ public class TaskResponseDto
     public string AssignedToUserName { get; set; }
     public int CreatedByUserId { get; set; }
     public string CreatedByUserName { get; set; }
+    public int? ProjectId { get; set; }
+    public string ProjectName { get; set; }
     public decimal EstimatedHours { get; set; }
     public decimal ActualHoursSpent { get; set; }
     public string Status { get; set; }
