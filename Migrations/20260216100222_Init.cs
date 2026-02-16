@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace TimeTrack.API.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class Init : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -159,7 +159,11 @@ namespace TimeTrack.API.Migrations
                     Priority = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false, defaultValue: "Medium"),
                     DueDate = table.Column<DateTime>(type: "datetime2", nullable: true),
                     CreatedDate = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    CompletedDate = table.Column<DateTime>(type: "datetime2", nullable: true)
+                    StartedDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    CompletedDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    IsApproved = table.Column<bool>(type: "bit", nullable: false),
+                    ApprovedDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ApprovedByUserId = table.Column<int>(type: "int", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -170,6 +174,11 @@ namespace TimeTrack.API.Migrations
                         principalTable: "Projects",
                         principalColumn: "ProjectId",
                         onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_Tasks_Users_ApprovedByUserId",
+                        column: x => x.ApprovedByUserId,
+                        principalTable: "Users",
+                        principalColumn: "UserId");
                     table.ForeignKey(
                         name: "FK_Tasks_Users_AssignedToUserId",
                         column: x => x.AssignedToUserId,
@@ -244,6 +253,11 @@ namespace TimeTrack.API.Migrations
                 name: "IX_Projects_Status",
                 table: "Projects",
                 column: "Status");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Tasks_ApprovedByUserId",
+                table: "Tasks",
+                column: "ApprovedByUserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Tasks_AssignedToUserId",

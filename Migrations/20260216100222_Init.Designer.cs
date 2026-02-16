@@ -12,8 +12,8 @@ using TimeTrack.API.Data;
 namespace TimeTrack.API.Migrations
 {
     [DbContext(typeof(TimeTrackDbContext))]
-    [Migration("20260213101013_AddTaskApprovalWorkflow")]
-    partial class AddTaskApprovalWorkflow
+    [Migration("20260216100222_Init")]
+    partial class Init
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

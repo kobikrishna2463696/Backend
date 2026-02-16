@@ -62,7 +62,7 @@ public class AuthController : ControllerBase
         return BadRequest(ApiResponseDto<string>.ErrorResponse(
             "Admin accounts cannot be created through self-registration."));
     }
-
+    //summaryy
     /// <summary>
     /// Get available departments for registration dropdown
     /// </summary>

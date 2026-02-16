@@ -11,11 +11,22 @@ using TimeTrack.API.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Database Configuration
+// Database Configuration with resiliency
 builder.Services.AddDbContext<TimeTrackDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("TimeTrackConnection")));
+{
+    var connStr = builder.Configuration.GetConnectionString("TimeTrackConnection");
+    options.UseSqlServer(connStr, sql =>
+    {
+        sql.EnableRetryOnFailure(
+            maxRetryCount: 5,
+            maxRetryDelay: TimeSpan.FromSeconds(10),
+            errorNumbersToAdd: null
+        );
+        sql.CommandTimeout(120);
+    });
+});
 
-// Repository Registration
+// Repositories
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<ITimeLogRepository, TimeLogRepository>();
@@ -24,7 +35,7 @@ builder.Services.AddScoped<ITaskTimeRepository, TaskTimeRepository>();
 builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
 builder.Services.AddScoped<IPendingRegistrationRepository, PendingRegistrationRepository>();
 
-// Service Layer Registration
+// Services
 builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
 builder.Services.AddScoped<ITimeLoggingService, TimeLoggingService>();
 builder.Services.AddScoped<ITaskManagementService, TaskManagementService>();
@@ -32,13 +43,12 @@ builder.Services.AddScoped<IProductivityAnalyticsService, ProductivityAnalyticsS
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IRegistrationService, RegistrationService>();
 
-// JWT Authentication
+// JWT
 var jwtKey = builder.Configuration["JwtSettings:SecretKey"];
 if (string.IsNullOrEmpty(jwtKey))
 {
     throw new InvalidOperationException("JWT SecretKey is not configured in appsettings.json");
 }
-
 var key = Encoding.ASCII.GetBytes(jwtKey);
 
 builder.Services.AddAuthentication(options =>
@@ -74,9 +84,9 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1", new OpenApiInfo 
-    { 
-        Title = "TimeTrack API", 
+    c.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "TimeTrack API",
         Version = "v1",
         Description = "Internal Time Logging & Productivity Monitoring System"
     });
@@ -114,33 +124,37 @@ builder.Services.AddCors(options =>
               .AllowAnyMethod()
               .AllowAnyHeader()
               .AllowCredentials();
-
     });
 });
 
 var app = builder.Build();
 
-// ✨ AUTO-CREATE DATABASE AND APPLY MIGRATIONS ✨
+// Apply migrations & seed within execution strategy
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
+    var logger = services.GetRequiredService<ILogger<Program>>();
+
     try
     {
         var context = services.GetRequiredService<TimeTrackDbContext>();
-        var logger = services.GetRequiredService<ILogger<Program>>();
-        
-        logger.LogInformation("Applying database migrations...");
-        context.Database.Migrate(); // This creates the database if it doesn't exist and applies all migrations
-        
-        logger.LogInformation("Seeding database...");
-        await DatabaseSeeder.SeedAsync(context); // 👈 ADD THIS LINE
-        
-        logger.LogInformation("Database is ready!");
+        var strategy = context.Database.CreateExecutionStrategy();
+
+        await strategy.ExecuteAsync(async () =>
+        {
+            logger.LogInformation("Applying database migrations...");
+            await context.Database.MigrateAsync();
+
+            logger.LogInformation("Seeding database...");
+            await DatabaseSeeder.SeedAsync(context);
+
+            logger.LogInformation("Database is ready!");
+        });
     }
     catch (Exception ex)
     {
-        var logger = services.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "An error occurred while migrating the database.");
+        var logger2 = services.GetRequiredService<ILogger<Program>>();
+        logger2.LogError(ex, "An error occurred while migrating the database.");
         throw;
     }
 }
