@@ -49,6 +49,7 @@ if (string.IsNullOrEmpty(jwtKey))
 {
     throw new InvalidOperationException("JWT SecretKey is not configured in appsettings.json");
 }
+
 var key = Encoding.ASCII.GetBytes(jwtKey);
 
 builder.Services.AddAuthentication(options =>
@@ -142,19 +143,52 @@ using (var scope = app.Services.CreateScope())
 
         await strategy.ExecuteAsync(async () =>
         {
-            logger.LogInformation("Applying database migrations...");
-            await context.Database.MigrateAsync();
+            // Check if database already has tables (created outside EF migrations)
+            var connection = context.Database.GetDbConnection();
+            await connection.OpenAsync();
+            
+            using var command = connection.CreateCommand();
+            command.CommandText = "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = 'Users'";
+            var tableExists = Convert.ToInt32(await command.ExecuteScalarAsync()) > 0;
+
+            if (tableExists)
+            {
+                logger.LogInformation("Existing database detected. Ensuring migration history is synchronized...");
+                
+                // Ensure migration history table exists and mark migrations as applied
+                await context.Database.ExecuteSqlRawAsync(@"
+                    IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = '__EFMigrationsHistory')
+                    BEGIN
+                        CREATE TABLE [__EFMigrationsHistory] (
+                            [MigrationId] nvarchar(150) NOT NULL,
+                            [ProductVersion] nvarchar(32) NOT NULL,
+                            CONSTRAINT [PK___EFMigrationsHistory] PRIMARY KEY ([MigrationId])
+                        );
+                    END;
+
+                    IF NOT EXISTS (SELECT 1 FROM [__EFMigrationsHistory] WHERE [MigrationId] = '20260211093650_Initial')
+                        INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion]) VALUES ('20260211093650_Initial', '9.0.0');
+
+                    IF NOT EXISTS (SELECT 1 FROM [__EFMigrationsHistory] WHERE [MigrationId] = '20260211124100_UpdateNullableFields')
+                        INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion]) VALUES ('20260211124100_UpdateNullableFields', '9.0.0');
+                ");
+                
+                logger.LogInformation("Migration history synchronized.");
+            }
+            else
+            {
+                logger.LogInformation("Applying database migrations...");
+                await context.Database.MigrateAsync();
+            }
 
             logger.LogInformation("Seeding database...");
             await DatabaseSeeder.SeedAsync(context);
-
             logger.LogInformation("Database is ready!");
         });
     }
     catch (Exception ex)
     {
-        var logger2 = services.GetRequiredService<ILogger<Program>>();
-        logger2.LogError(ex, "An error occurred while migrating the database.");
+        logger.LogError(ex, "An error occurred while migrating the database.");
         throw;
     }
 }
@@ -173,3 +207,4 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+

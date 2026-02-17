@@ -11,304 +11,157 @@ namespace TimeTrack.API.Data.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropForeignKey(
-                name: "FK_PendingRegistrations_Users_ProcessedByUserId",
-                table: "PendingRegistrations");
+            // Make entire migration idempotent - handle existing database schema
+            migrationBuilder.Sql(@"
+                -- Drop foreign keys if they exist
+                IF EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_PendingRegistrations_Users_ProcessedByUserId')
+                    ALTER TABLE [PendingRegistrations] DROP CONSTRAINT [FK_PendingRegistrations_Users_ProcessedByUserId];
 
-            migrationBuilder.DropForeignKey(
-                name: "FK_Tasks_Projects_ProjectId",
-                table: "Tasks");
+                IF EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_Tasks_Projects_ProjectId')
+                    ALTER TABLE [Tasks] DROP CONSTRAINT [FK_Tasks_Projects_ProjectId];
 
-            migrationBuilder.DropForeignKey(
-                name: "FK_TaskTimes_Users_UserId",
-                table: "TaskTimes");
+                IF EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_TaskTimes_Users_UserId')
+                    ALTER TABLE [TaskTimes] DROP CONSTRAINT [FK_TaskTimes_Users_UserId];
 
-            migrationBuilder.DropIndex(
-                name: "IX_Users_Email",
-                table: "Users");
+                -- Drop indexes if they exist
+                IF EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_TimeLogs_UserId_Date' AND object_id = OBJECT_ID('TimeLogs'))
+                    DROP INDEX [IX_TimeLogs_UserId_Date] ON [TimeLogs];
 
-            migrationBuilder.DropIndex(
-                name: "IX_TimeLogs_UserId_Date",
-                table: "TimeLogs");
+                IF EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_TaskTimes_TaskId_UserId_Date' AND object_id = OBJECT_ID('TaskTimes'))
+                    DROP INDEX [IX_TaskTimes_TaskId_UserId_Date] ON [TaskTimes];
 
-            migrationBuilder.DropIndex(
-                name: "IX_TaskTimes_TaskId_UserId_Date",
-                table: "TaskTimes");
+                IF EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Projects_Status' AND object_id = OBJECT_ID('Projects'))
+                    DROP INDEX [IX_Projects_Status] ON [Projects];
 
-            migrationBuilder.DropIndex(
-                name: "IX_Projects_Status",
-                table: "Projects");
+                IF EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_PendingRegistrations_Email' AND object_id = OBJECT_ID('PendingRegistrations'))
+                    DROP INDEX [IX_PendingRegistrations_Email] ON [PendingRegistrations];
 
-            migrationBuilder.DropIndex(
-                name: "IX_PendingRegistrations_Email",
-                table: "PendingRegistrations");
+                IF EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Notifications_UserId_Status' AND object_id = OBJECT_ID('Notifications'))
+                    DROP INDEX [IX_Notifications_UserId_Status] ON [Notifications];
 
-            migrationBuilder.DropIndex(
-                name: "IX_Notifications_UserId_Status",
-                table: "Notifications");
+                -- Clear nullable FK references and conditionally delete seeded user
+                UPDATE [Tasks] SET [ApprovedByUserId] = NULL WHERE [ApprovedByUserId] = 1;
+                UPDATE [PendingRegistrations] SET [ProcessedByUserId] = NULL WHERE [ProcessedByUserId] = 1;
 
-            migrationBuilder.DeleteData(
-                table: "Users",
-                keyColumn: "UserId",
-                keyValue: 1);
+                IF NOT EXISTS (SELECT 1 FROM [Tasks] WHERE [AssignedToUserId] = 1 OR [CreatedByUserId] = 1)
+                   AND NOT EXISTS (SELECT 1 FROM [TimeLogs] WHERE [UserId] = 1)
+                   AND NOT EXISTS (SELECT 1 FROM [TaskTimes] WHERE [UserId] = 1)
+                   AND NOT EXISTS (SELECT 1 FROM [Notifications] WHERE [UserId] = 1)
+                BEGIN
+                    DELETE FROM [Users] WHERE [UserId] = 1;
+                END
 
-            migrationBuilder.AlterColumn<string>(
-                name: "Status",
-                table: "Users",
-                type: "nvarchar(20)",
-                maxLength: 20,
-                nullable: false,
-                oldClrType: typeof(string),
-                oldType: "nvarchar(20)",
-                oldMaxLength: 20,
-                oldDefaultValue: "Active");
+                -- Remove default constraints if they exist before altering columns
+                DECLARE @constraintName nvarchar(200);
 
-            migrationBuilder.AlterColumn<string>(
-                name: "Status",
-                table: "Tasks",
-                type: "nvarchar(50)",
-                maxLength: 50,
-                nullable: false,
-                oldClrType: typeof(string),
-                oldType: "nvarchar(50)",
-                oldMaxLength: 50,
-                oldDefaultValue: "Pending");
+                SELECT @constraintName = d.name FROM sys.default_constraints d
+                JOIN sys.columns c ON d.parent_object_id = c.object_id AND d.parent_column_id = c.column_id
+                WHERE c.object_id = OBJECT_ID('Users') AND c.name = 'Status';
+                IF @constraintName IS NOT NULL EXEC('ALTER TABLE [Users] DROP CONSTRAINT [' + @constraintName + ']');
 
-            migrationBuilder.AlterColumn<string>(
-                name: "Priority",
-                table: "Tasks",
-                type: "nvarchar(50)",
-                maxLength: 50,
-                nullable: false,
-                oldClrType: typeof(string),
-                oldType: "nvarchar(50)",
-                oldMaxLength: 50,
-                oldDefaultValue: "Medium");
+                SELECT @constraintName = d.name FROM sys.default_constraints d
+                JOIN sys.columns c ON d.parent_object_id = c.object_id AND d.parent_column_id = c.column_id
+                WHERE c.object_id = OBJECT_ID('Tasks') AND c.name = 'Status';
+                IF @constraintName IS NOT NULL EXEC('ALTER TABLE [Tasks] DROP CONSTRAINT [' + @constraintName + ']');
 
-            migrationBuilder.AlterColumn<string>(
-                name: "Status",
-                table: "Projects",
-                type: "nvarchar(50)",
-                maxLength: 50,
-                nullable: false,
-                oldClrType: typeof(string),
-                oldType: "nvarchar(50)",
-                oldMaxLength: 50,
-                oldDefaultValue: "Active");
+                SELECT @constraintName = d.name FROM sys.default_constraints d
+                JOIN sys.columns c ON d.parent_object_id = c.object_id AND d.parent_column_id = c.column_id
+                WHERE c.object_id = OBJECT_ID('Tasks') AND c.name = 'Priority';
+                IF @constraintName IS NOT NULL EXEC('ALTER TABLE [Tasks] DROP CONSTRAINT [' + @constraintName + ']');
 
-            migrationBuilder.AlterColumn<string>(
-                name: "Status",
-                table: "PendingRegistrations",
-                type: "nvarchar(20)",
-                maxLength: 20,
-                nullable: false,
-                oldClrType: typeof(string),
-                oldType: "nvarchar(20)",
-                oldMaxLength: 20,
-                oldDefaultValue: "Pending");
+                SELECT @constraintName = d.name FROM sys.default_constraints d
+                JOIN sys.columns c ON d.parent_object_id = c.object_id AND d.parent_column_id = c.column_id
+                WHERE c.object_id = OBJECT_ID('Projects') AND c.name = 'Status';
+                IF @constraintName IS NOT NULL EXEC('ALTER TABLE [Projects] DROP CONSTRAINT [' + @constraintName + ']');
 
-            migrationBuilder.AlterColumn<string>(
-                name: "Status",
-                table: "Notifications",
-                type: "nvarchar(20)",
-                maxLength: 20,
-                nullable: false,
-                oldClrType: typeof(string),
-                oldType: "nvarchar(20)",
-                oldMaxLength: 20,
-                oldDefaultValue: "Unread");
+                SELECT @constraintName = d.name FROM sys.default_constraints d
+                JOIN sys.columns c ON d.parent_object_id = c.object_id AND d.parent_column_id = c.column_id
+                WHERE c.object_id = OBJECT_ID('PendingRegistrations') AND c.name = 'Status';
+                IF @constraintName IS NOT NULL EXEC('ALTER TABLE [PendingRegistrations] DROP CONSTRAINT [' + @constraintName + ']');
 
-            migrationBuilder.CreateIndex(
-                name: "IX_TimeLogs_UserId",
-                table: "TimeLogs",
-                column: "UserId");
+                SELECT @constraintName = d.name FROM sys.default_constraints d
+                JOIN sys.columns c ON d.parent_object_id = c.object_id AND d.parent_column_id = c.column_id
+                WHERE c.object_id = OBJECT_ID('Notifications') AND c.name = 'Status';
+                IF @constraintName IS NOT NULL EXEC('ALTER TABLE [Notifications] DROP CONSTRAINT [' + @constraintName + ']');
 
-            migrationBuilder.CreateIndex(
-                name: "IX_TaskTimes_TaskId",
-                table: "TaskTimes",
-                column: "TaskId");
+                -- Create indexes if they don't exist
+                IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_TimeLogs_UserId' AND object_id = OBJECT_ID('TimeLogs'))
+                    CREATE INDEX [IX_TimeLogs_UserId] ON [TimeLogs] ([UserId]);
 
-            migrationBuilder.CreateIndex(
-                name: "IX_Notifications_UserId",
-                table: "Notifications",
-                column: "UserId");
+                IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_TaskTimes_TaskId' AND object_id = OBJECT_ID('TaskTimes'))
+                    CREATE INDEX [IX_TaskTimes_TaskId] ON [TaskTimes] ([TaskId]);
 
-            migrationBuilder.AddForeignKey(
-                name: "FK_PendingRegistrations_Users_ProcessedByUserId",
-                table: "PendingRegistrations",
-                column: "ProcessedByUserId",
-                principalTable: "Users",
-                principalColumn: "UserId");
+                IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Notifications_UserId' AND object_id = OBJECT_ID('Notifications'))
+                    CREATE INDEX [IX_Notifications_UserId] ON [Notifications] ([UserId]);
 
-            migrationBuilder.AddForeignKey(
-                name: "FK_Tasks_Projects_ProjectId",
-                table: "Tasks",
-                column: "ProjectId",
-                principalTable: "Projects",
-                principalColumn: "ProjectId");
+                -- Re-add foreign keys if they don't exist
+                IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_PendingRegistrations_Users_ProcessedByUserId')
+                    ALTER TABLE [PendingRegistrations] ADD CONSTRAINT [FK_PendingRegistrations_Users_ProcessedByUserId]
+                    FOREIGN KEY ([ProcessedByUserId]) REFERENCES [Users] ([UserId]);
 
-            migrationBuilder.AddForeignKey(
-                name: "FK_TaskTimes_Users_UserId",
-                table: "TaskTimes",
-                column: "UserId",
-                principalTable: "Users",
-                principalColumn: "UserId",
-                onDelete: ReferentialAction.Cascade);
+                IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_Tasks_Projects_ProjectId')
+                    ALTER TABLE [Tasks] ADD CONSTRAINT [FK_Tasks_Projects_ProjectId]
+                    FOREIGN KEY ([ProjectId]) REFERENCES [Projects] ([ProjectId]);
+
+                IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_TaskTimes_Users_UserId')
+                    ALTER TABLE [TaskTimes] ADD CONSTRAINT [FK_TaskTimes_Users_UserId]
+                    FOREIGN KEY ([UserId]) REFERENCES [Users] ([UserId]) ON DELETE CASCADE;
+            ");
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropForeignKey(
-                name: "FK_PendingRegistrations_Users_ProcessedByUserId",
-                table: "PendingRegistrations");
+            migrationBuilder.Sql(@"
+                -- Drop foreign keys if they exist
+                IF EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_PendingRegistrations_Users_ProcessedByUserId')
+                    ALTER TABLE [PendingRegistrations] DROP CONSTRAINT [FK_PendingRegistrations_Users_ProcessedByUserId];
 
-            migrationBuilder.DropForeignKey(
-                name: "FK_Tasks_Projects_ProjectId",
-                table: "Tasks");
+                IF EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_Tasks_Projects_ProjectId')
+                    ALTER TABLE [Tasks] DROP CONSTRAINT [FK_Tasks_Projects_ProjectId];
 
-            migrationBuilder.DropForeignKey(
-                name: "FK_TaskTimes_Users_UserId",
-                table: "TaskTimes");
+                IF EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_TaskTimes_Users_UserId')
+                    ALTER TABLE [TaskTimes] DROP CONSTRAINT [FK_TaskTimes_Users_UserId];
 
-            migrationBuilder.DropIndex(
-                name: "IX_TimeLogs_UserId",
-                table: "TimeLogs");
+                -- Drop indexes if they exist
+                IF EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_TimeLogs_UserId' AND object_id = OBJECT_ID('TimeLogs'))
+                    DROP INDEX [IX_TimeLogs_UserId] ON [TimeLogs];
 
-            migrationBuilder.DropIndex(
-                name: "IX_TaskTimes_TaskId",
-                table: "TaskTimes");
+                IF EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_TaskTimes_TaskId' AND object_id = OBJECT_ID('TaskTimes'))
+                    DROP INDEX [IX_TaskTimes_TaskId] ON [TaskTimes];
 
-            migrationBuilder.DropIndex(
-                name: "IX_Notifications_UserId",
-                table: "Notifications");
+                IF EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Notifications_UserId' AND object_id = OBJECT_ID('Notifications'))
+                    DROP INDEX [IX_Notifications_UserId] ON [Notifications];
 
-            migrationBuilder.AlterColumn<string>(
-                name: "Status",
-                table: "Users",
-                type: "nvarchar(20)",
-                maxLength: 20,
-                nullable: false,
-                defaultValue: "Active",
-                oldClrType: typeof(string),
-                oldType: "nvarchar(20)",
-                oldMaxLength: 20);
+                -- Recreate original indexes
+                IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_TimeLogs_UserId_Date' AND object_id = OBJECT_ID('TimeLogs'))
+                    CREATE INDEX [IX_TimeLogs_UserId_Date] ON [TimeLogs] ([UserId], [Date]);
 
-            migrationBuilder.AlterColumn<string>(
-                name: "Status",
-                table: "Tasks",
-                type: "nvarchar(50)",
-                maxLength: 50,
-                nullable: false,
-                defaultValue: "Pending",
-                oldClrType: typeof(string),
-                oldType: "nvarchar(50)",
-                oldMaxLength: 50);
+                IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_TaskTimes_TaskId_UserId_Date' AND object_id = OBJECT_ID('TaskTimes'))
+                    CREATE INDEX [IX_TaskTimes_TaskId_UserId_Date] ON [TaskTimes] ([TaskId], [UserId], [Date]);
 
-            migrationBuilder.AlterColumn<string>(
-                name: "Priority",
-                table: "Tasks",
-                type: "nvarchar(50)",
-                maxLength: 50,
-                nullable: false,
-                defaultValue: "Medium",
-                oldClrType: typeof(string),
-                oldType: "nvarchar(50)",
-                oldMaxLength: 50);
+                IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Projects_Status' AND object_id = OBJECT_ID('Projects'))
+                    CREATE INDEX [IX_Projects_Status] ON [Projects] ([Status]);
 
-            migrationBuilder.AlterColumn<string>(
-                name: "Status",
-                table: "Projects",
-                type: "nvarchar(50)",
-                maxLength: 50,
-                nullable: false,
-                defaultValue: "Active",
-                oldClrType: typeof(string),
-                oldType: "nvarchar(50)",
-                oldMaxLength: 50);
+                IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_PendingRegistrations_Email' AND object_id = OBJECT_ID('PendingRegistrations'))
+                    CREATE UNIQUE INDEX [IX_PendingRegistrations_Email] ON [PendingRegistrations] ([Email]);
 
-            migrationBuilder.AlterColumn<string>(
-                name: "Status",
-                table: "PendingRegistrations",
-                type: "nvarchar(20)",
-                maxLength: 20,
-                nullable: false,
-                defaultValue: "Pending",
-                oldClrType: typeof(string),
-                oldType: "nvarchar(20)",
-                oldMaxLength: 20);
+                IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_Notifications_UserId_Status' AND object_id = OBJECT_ID('Notifications'))
+                    CREATE INDEX [IX_Notifications_UserId_Status] ON [Notifications] ([UserId], [Status]);
 
-            migrationBuilder.AlterColumn<string>(
-                name: "Status",
-                table: "Notifications",
-                type: "nvarchar(20)",
-                maxLength: 20,
-                nullable: false,
-                defaultValue: "Unread",
-                oldClrType: typeof(string),
-                oldType: "nvarchar(20)",
-                oldMaxLength: 20);
+                -- Re-add original foreign keys
+                IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_PendingRegistrations_Users_ProcessedByUserId')
+                    ALTER TABLE [PendingRegistrations] ADD CONSTRAINT [FK_PendingRegistrations_Users_ProcessedByUserId]
+                    FOREIGN KEY ([ProcessedByUserId]) REFERENCES [Users] ([UserId]) ON DELETE SET NULL;
 
-            migrationBuilder.InsertData(
-                table: "Users",
-                columns: new[] { "UserId", "CreatedDate", "Department", "Email", "LastLoginDate", "Name", "PasswordHash", "Role", "Status" },
-                values: new object[] { 1, new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), "Multi Cloud", "admin@timetrack.com", null, "System Administrator", "$2a$11$X7ZQ3Z3Z3Z3Z3Z3Z3Z3Z3uK8vJ8vJ8vJ8vJ8vJ8vJ8vJ8vJ8vJ8vJ8", "Admin", "Active" });
+                IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_Tasks_Projects_ProjectId')
+                    ALTER TABLE [Tasks] ADD CONSTRAINT [FK_Tasks_Projects_ProjectId]
+                    FOREIGN KEY ([ProjectId]) REFERENCES [Projects] ([ProjectId]) ON DELETE SET NULL;
 
-            migrationBuilder.CreateIndex(
-                name: "IX_Users_Email",
-                table: "Users",
-                column: "Email",
-                unique: true);
-
-            migrationBuilder.CreateIndex(
-                name: "IX_TimeLogs_UserId_Date",
-                table: "TimeLogs",
-                columns: new[] { "UserId", "Date" });
-
-            migrationBuilder.CreateIndex(
-                name: "IX_TaskTimes_TaskId_UserId_Date",
-                table: "TaskTimes",
-                columns: new[] { "TaskId", "UserId", "Date" });
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Projects_Status",
-                table: "Projects",
-                column: "Status");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_PendingRegistrations_Email",
-                table: "PendingRegistrations",
-                column: "Email",
-                unique: true);
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Notifications_UserId_Status",
-                table: "Notifications",
-                columns: new[] { "UserId", "Status" });
-
-            migrationBuilder.AddForeignKey(
-                name: "FK_PendingRegistrations_Users_ProcessedByUserId",
-                table: "PendingRegistrations",
-                column: "ProcessedByUserId",
-                principalTable: "Users",
-                principalColumn: "UserId",
-                onDelete: ReferentialAction.SetNull);
-
-            migrationBuilder.AddForeignKey(
-                name: "FK_Tasks_Projects_ProjectId",
-                table: "Tasks",
-                column: "ProjectId",
-                principalTable: "Projects",
-                principalColumn: "ProjectId",
-                onDelete: ReferentialAction.SetNull);
-
-            migrationBuilder.AddForeignKey(
-                name: "FK_TaskTimes_Users_UserId",
-                table: "TaskTimes",
-                column: "UserId",
-                principalTable: "Users",
-                principalColumn: "UserId",
-                onDelete: ReferentialAction.Restrict);
+                IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_TaskTimes_Users_UserId')
+                    ALTER TABLE [TaskTimes] ADD CONSTRAINT [FK_TaskTimes_Users_UserId]
+                    FOREIGN KEY ([UserId]) REFERENCES [Users] ([UserId]);
+            ");
         }
     }
 }
